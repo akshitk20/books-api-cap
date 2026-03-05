@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mvn clean:*)",
+      "Bash(mvn spring-boot:run:*)",
+      "Bash(curl:*)"
+    ]
+  }
+}

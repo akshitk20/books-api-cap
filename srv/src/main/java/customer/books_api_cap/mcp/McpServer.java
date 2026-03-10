@@ -1,6 +1,7 @@
 package customer.books_api_cap.mcp;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
@@ -80,7 +81,7 @@ public class McpServer {
             JsonObject request = JsonParser.parseString(line).getAsJsonObject();
 
             String method = request.has("method") ? request.get("method").getAsString() : null;
-            JsonObject id = request.has("id") ? request.get("id").getAsJsonObject() : null;
+            JsonElement id = request.has("id") ? request.get("id") : null;
             JsonObject params = request.has("params") ? request.get("params").getAsJsonObject() : new JsonObject();
 
             if (method == null) {
@@ -157,7 +158,7 @@ public class McpServer {
         return new JsonObject();
     }
 
-    private void sendResponse(JsonObject id, JsonObject result) {
+    private void sendResponse(JsonElement id, JsonObject result) {
         JsonObject response = new JsonObject();
         response.addProperty("jsonrpc", "2.0");
         response.add("id", id);
@@ -167,7 +168,7 @@ public class McpServer {
         writer.flush();
     }
 
-    private void sendError(JsonObject id, int code, String message) {
+    private void sendError(JsonElement id, int code, String message) {
         JsonObject error = new JsonObject();
         error.addProperty("code", code);
         error.addProperty("message", message);

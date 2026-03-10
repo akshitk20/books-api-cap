@@ -1,9 +1,62 @@
-
 ---
 spring:
   config.activate.on-profile: default
   sql.init.platform: h2
+
+  # Cache Configuration
+  cache:
+    type: caffeine
+    caffeine:
+      spec: maximumSize=1000,expireAfterWrite=600s
+    cache-names:
+      - books:all
+      - books:search
+      - book:single
+      - authors:all
+      - author:single
+      - publishers:all
+      - books:highstock
+      - reviews:book
+      - resources:books
+      - resources:authors
+      - resources:publishers
+
+  # Security Configuration
+  security:
+    enabled: ${SECURITY_ENABLED:true}
+
 server:
   port: 9081
+
 cds:
   data-source.auto-config.enabled: false
+
+# Cache TTL Configuration (seconds)
+cache:
+  ttl:
+    default: 600        # 10 minutes
+    books: 600
+    authors: 600
+    publishers: 600
+    reviews: 300        # 5 minutes (more dynamic)
+    resources: 1200     # 20 minutes (JSON responses)
+
+---
+# MCP Mode Profile (no security, lighter caching)
+spring:
+  config.activate.on-profile: mcp
+  security:
+    enabled: false
+  cache:
+    type: caffeine
+    caffeine:
+      spec: maximumSize=500,expireAfterWrite=300s
+
+cache:
+  ttl:
+    default: 300
+    books: 300
+    authors: 300
+    publishers: 300
+    reviews: 180
+    resources: 600

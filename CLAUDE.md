@@ -44,8 +44,16 @@ The CDS compiler generates Java POJOs from `.cds` files during the Maven build. 
 Service handlers in `srv/src/main/java/customer/books_api_cap/handlers/` implement custom business logic:
 - Use `@ServiceName` to bind to CDS service definitions
 - Use `@On`, `@Before`, `@After` annotations to hook into CDS events
-- Access database via injected `PersistenceService`
+- Access database via injected `BookshopCatalogService` (cached service layer)
 - Use CQN (CDS Query Notation) for type-safe queries with generated metadata classes
+
+### Cached Service Layer
+
+`BookshopCatalogService` in `srv/src/main/java/customer/books_api_cap/services/` provides cached database access:
+- All database queries should go through this service to benefit from caching
+- Methods are annotated with `@Cacheable` for automatic caching
+- Used by both MCP server and OData service handlers
+- Direct `PersistenceService` usage should be avoided in favor of this cached service
 
 ## Development Commands
 
@@ -62,7 +70,7 @@ mvn spring-boot:run -pl srv
 cd srv && mvn spring-boot:run
 ```
 
-The application starts on `http://localhost:8080`.
+The application starts on `http://localhost:9081`.
 
 ### CDS Development
 
@@ -92,6 +100,48 @@ This runs the `cds-maven-plugin` which:
 3. Generates Java POJOs into `srv/src/gen/java/`
 4. Creates H2 schema SQL
 
+## Caching
+
+The application uses Caffeine in-memory caching for read-only catalog operations.
+
+**Cache Configuration:**
+- Cache provider: Caffeine (embedded, no external dependencies)
+- Default TTL: 10 minutes (configurable in application.yaml)
+- Cache keys: Entity IDs, search terms, or operation type
+- Statistics: Enabled via `recordStats()` for monitoring
+
+**Cached Operations:**
+- All books, authors, publishers listings
+- Single entity lookups by ID
+- Search operations
+- High stock book queries
+- Book reviews
+- Resource JSON responses (MCP server)
+
+**Cache TTL Configuration:**
+Edit `srv/src/main/resources/application.yaml` under `cache.ttl.*` properties.
+
+**Cache Architecture:**
+- `BookshopCatalogService` - Service layer with `@Cacheable` annotations
+- All database queries go through this cached service
+- Both MCP server and OData handlers use the same cached service layer
+
+## Security
+
+The application uses SAP XSUAA for JWT-based authentication when deployed to BTP.
+
+**Security Modes:**
+- **Web Server Mode** (default): XSUAA authentication required for all `/CatalogService/**` endpoints
+- **MCP Mode** (`--mcp-mode` flag): Security disabled (local development via stdio)
+
+**Testing Locally:**
+- Set `spring.security.enabled=false` in application.yaml for local development without XSUAA
+- Or use `SECURITY_ENABLED=false` environment variable
+- MCP mode automatically disables security
+
+**BTP Deployment:**
+Requires XSUAA service binding (see `xs-security.json` for configuration when deploying to BTP).
+
 ## Key Technologies
 
 - **Java 21** - Language version
@@ -99,6 +149,8 @@ This runs the `cds-maven-plugin` which:
 - **SAP CDS 4.4.2** - Core Data Services framework
 - **Maven 3.6.3+** - Build tool (enforced by maven-enforcer-plugin)
 - **H2** - In-memory database for development
+- **Caffeine** - In-memory caching
+- **SAP XSUAA** - JWT-based authentication for BTP
 
 ## OData Endpoints
 

@@ -1,20 +1,15 @@
 package customer.books_api_cap.mcp;
 
 import cds.gen.catalogservice.Books;
-import cds.gen.catalogservice.Books_;
 import cds.gen.catalogservice.Authors;
-import cds.gen.catalogservice.Authors_;
 import cds.gen.catalogservice.Publishers;
-import cds.gen.catalogservice.Publishers_;
 import cds.gen.catalogservice.Reviews;
-import cds.gen.catalogservice.Reviews_;
+import customer.books_api_cap.services.BookshopCatalogService;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
-import com.sap.cds.ql.Select;
-import com.sap.cds.ql.cqn.CqnSelect;
-import com.sap.cds.services.persistence.PersistenceService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -30,7 +25,7 @@ public class BookshopMcpServer {
     private static final Logger LOGGER = Logger.getLogger(BookshopMcpServer.class.getName());
 
     @Autowired
-    private PersistenceService persistenceService;
+    private BookshopCatalogService catalogService;
 
     private final Gson gson = new Gson();
     private McpServer mcpServer;
@@ -236,8 +231,7 @@ public class BookshopMcpServer {
     }
 
     private String listBooks() {
-        CqnSelect query = Select.from(Books_.class);
-        List<Books> books = persistenceService.run(query).listOf(Books.class);
+        List<Books> books = catalogService.getAllBooks();
 
         StringBuilder result = new StringBuilder();
         result.append("Found ").append(books.size()).append(" books in catalog:\n\n");
@@ -254,9 +248,7 @@ public class BookshopMcpServer {
     }
 
     private String searchBooks(String searchTitle) {
-        CqnSelect query = Select.from(Books_.class)
-            .where(b -> b.title().contains(searchTitle));
-        List<Books> books = persistenceService.run(query).listOf(Books.class);
+        List<Books> books = catalogService.searchBooks(searchTitle);
 
         if (books.isEmpty()) {
             return "No books found matching: " + searchTitle;
@@ -279,8 +271,7 @@ public class BookshopMcpServer {
     }
 
     private String getBook(String bookId) {
-        CqnSelect query = Select.from(Books_.class).where(b -> b.ID().eq(bookId));
-        Books book = persistenceService.run(query).single(Books.class);
+        Books book = catalogService.getBook(bookId);
 
         if (book == null) {
             return "Book not found with ID: " + bookId;
@@ -298,8 +289,7 @@ public class BookshopMcpServer {
     }
 
     private String listAuthors() {
-        CqnSelect query = Select.from(Authors_.class);
-        List<Authors> authors = persistenceService.run(query).listOf(Authors.class);
+        List<Authors> authors = catalogService.getAllAuthors();
 
         StringBuilder result = new StringBuilder();
         result.append("Found ").append(authors.size()).append(" authors:\n\n");
@@ -319,8 +309,7 @@ public class BookshopMcpServer {
     }
 
     private String getAuthor(String authorId) {
-        CqnSelect query = Select.from(Authors_.class).where(a -> a.ID().eq(authorId));
-        Authors author = persistenceService.run(query).single(Authors.class);
+        Authors author = catalogService.getAuthor(authorId);
 
         if (author == null) {
             return "Author not found with ID: " + authorId;
@@ -344,8 +333,7 @@ public class BookshopMcpServer {
     }
 
     private String listPublishers() {
-        CqnSelect query = Select.from(Publishers_.class);
-        List<Publishers> publishers = persistenceService.run(query).listOf(Publishers.class);
+        List<Publishers> publishers = catalogService.getAllPublishers();
 
         StringBuilder result = new StringBuilder();
         result.append("Found ").append(publishers.size()).append(" publishers:\n\n");
@@ -362,9 +350,7 @@ public class BookshopMcpServer {
     }
 
     private String getHighStockBooks(int minStock) {
-        CqnSelect query = Select.from(Books_.class)
-            .where(b -> b.stock().ge(minStock));
-        List<Books> books = persistenceService.run(query).listOf(Books.class);
+        List<Books> books = catalogService.getHighStockBooks(minStock);
 
         StringBuilder result = new StringBuilder();
         result.append("Books with stock >= ").append(minStock).append(":\n\n");
@@ -382,9 +368,7 @@ public class BookshopMcpServer {
     }
 
     private String getBookReviews(String bookId) {
-        CqnSelect query = Select.from(Reviews_.class)
-            .where(r -> r.book_ID().eq(bookId));
-        List<Reviews> reviews = persistenceService.run(query).listOf(Reviews.class);
+        List<Reviews> reviews = catalogService.getBookReviews(bookId);
 
         StringBuilder result = new StringBuilder();
         result.append("Reviews for book ID ").append(bookId).append(":\n\n");
@@ -468,21 +452,21 @@ public class BookshopMcpServer {
         return result;
     }
 
+    @Cacheable(value = "resources:books")
     private String getBooksJson() {
-        CqnSelect query = Select.from(Books_.class);
-        List<Books> books = persistenceService.run(query).listOf(Books.class);
+        List<Books> books = catalogService.getAllBooks();
         return gson.toJson(books);
     }
 
+    @Cacheable(value = "resources:authors")
     private String getAuthorsJson() {
-        CqnSelect query = Select.from(Authors_.class);
-        List<Authors> authors = persistenceService.run(query).listOf(Authors.class);
+        List<Authors> authors = catalogService.getAllAuthors();
         return gson.toJson(authors);
     }
 
+    @Cacheable(value = "resources:publishers")
     private String getPublishersJson() {
-        CqnSelect query = Select.from(Publishers_.class);
-        List<Publishers> publishers = persistenceService.run(query).listOf(Publishers.class);
+        List<Publishers> publishers = catalogService.getAllPublishers();
         return gson.toJson(publishers);
     }
 }

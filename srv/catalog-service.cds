@@ -6,6 +6,7 @@ service CatalogService {
   entity Books as projection on db.Books {
     key ID,
     title,
+    stock,
     author,
     publisher,
     reviews

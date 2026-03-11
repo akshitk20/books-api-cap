@@ -1,0 +1,52 @@
+# Test Profile - Security Disabled for Most Tests
+spring:
+  config.activate.on-profile: test
+
+  # Disable security for most integration tests
+  # Individual security tests will enable it as needed
+  security:
+    enabled: false
+
+  # Lightweight cache configuration for tests
+  cache:
+    type: caffeine
+    caffeine:
+      spec: maximumSize=100,expireAfterWrite=60s
+    cache-names:
+      - books:all
+      - books:search
+      - book:single
+      - authors:all
+      - author:single
+      - publishers:all
+      - books:highstock
+      - reviews:book
+      - resources:books
+      - resources:authors
+      - resources:publishers
+
+  sql.init.platform: h2
+
+# Test cache TTL (shorter for faster tests)
+cache:
+  ttl:
+    default: 60
+    books: 60
+    authors: 60
+    publishers: 60
+    reviews: 30
+    resources: 120
+
+server:
+  port: 0  # Random port for tests to avoid conflicts
+
+cds:
+  data-source.auto-config.enabled: false
+
+# Logging for tests
+logging:
+  level:
+    root: WARN
+    customer.books_api_cap: INFO
+    org.springframework.security: DEBUG
+    org.springframework.cache: DEBUG
